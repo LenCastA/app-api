@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.RestController
 class HourlyLoadController(
     val hourlyLoadService: HourlyLoadService,
 ) {
+    @GetMapping(params = ["faculty"])
+    fun getAllByFaculty(
+        @RequestParam(name = "faculty") facultyId: Long,
+    ): List<HourlyLoad> = hourlyLoadService.getAllByFaculty(facultyId)
+
     @GetMapping("/latest")
     fun getLatestBySpeciality(
         @RequestParam(name = "faculty") facultyId: Long,
