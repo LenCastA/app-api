@@ -1,6 +1,8 @@
 package io.octatec.horext.api.service
 
 import io.octatec.horext.api.domain.Subject
+import io.octatec.horext.api.dto.CourseAffiliation
+import io.octatec.horext.api.dto.OrganizationUnitSummary
 import io.octatec.horext.api.repository.SubjectRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -21,6 +23,23 @@ class SubjectServiceImplTest {
     fun setUp() {
         MockitoAnnotations.openMocks(this)
         service = SubjectServiceImpl(subjectRepository)
+    }
+
+    @Test
+    fun getCourseAffiliations_returnsRepositoryResult() {
+        val courseIds = setOf("BIC01")
+        val expected =
+            listOf(
+                CourseAffiliation(
+                    courseId = "BIC01",
+                    faculties = listOf(OrganizationUnitSummary(1, "FIIS", "FIIS")),
+                    specialities = listOf(OrganizationUnitSummary(2, "I1", "Sistemas")),
+                ),
+            )
+        `when`(subjectRepository.getCourseAffiliations(courseIds)).thenReturn(expected)
+
+        assertEquals(expected, service.getCourseAffiliations(courseIds))
+        verify(subjectRepository).getCourseAffiliations(courseIds)
     }
 
     @Test

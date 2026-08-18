@@ -8,6 +8,8 @@ data class Subject(
     var credits: Int?,
     var cycle: Int?,
     var relationships: List<SubjectRelationship> = ArrayList(),
+    var specialityCodes: List<String> = emptyList(),
+    var recommended: Boolean = false,
 ) {
     constructor(id: Long) : this(id, null, null, null, null, null)
 }
