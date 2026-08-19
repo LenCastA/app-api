@@ -9,11 +9,6 @@ interface SubjectRepository {
 
     fun getAllByStudyPlanId(studyPlanId: Long): List<Subject>
 
-    fun getAllBySpecialityId(
-        specialityId: Long,
-        hourlyLoadId: Long,
-    ): List<Subject>
-
     fun getAllBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
         specialityId: Long,
@@ -28,9 +23,25 @@ interface SubjectRepository {
         limit: Int,
     ): Page<Subject>
 
-    fun getAllBySpecialityIdAndHourlyLoadIdAndCycleId(
-        specialityId: Long,
+    fun getPageBySearchAndFacultyIdAndHourlyLoad(
+        search: String,
+        facultyId: Long,
         hourlyLoadId: Long,
-        cycleId: Int,
+        offset: Int,
+        limit: Int,
+    ): Page<Subject>
+
+    fun getPageBySearchAndStudyPlanIdAndHourlyLoad(
+        search: String,
+        studyPlanId: Long,
+        hourlyLoadId: Long,
+        offset: Int,
+        limit: Int,
+    ): Page<Subject>
+
+    fun getAllByHourlyLoadIdAndStudyPlanIdAndCycle(
+        hourlyLoadId: Long,
+        studyPlanId: Long,
+        cycle: Int,
     ): List<Subject>
 }

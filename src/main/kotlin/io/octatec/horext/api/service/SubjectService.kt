@@ -9,16 +9,19 @@ interface SubjectService {
 
     fun getAllByStudyPlanId(studyPlanId: Long): List<Subject>
 
-    fun getAllBySpecialityId(
-        specialityId: Long,
-        hourlyLoadId: Long,
-    ): List<Subject>
-
     fun getAllBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
         specialityId: Long,
         hourlyLoadId: Long,
     ): List<Subject>
+
+    fun getPageBySearchAndFacultyIdAndHourlyLoad(
+        search: String,
+        facultyId: Long,
+        hourlyLoadId: Long,
+        offset: Int,
+        limit: Int,
+    ): Page<Subject>
 
     fun getPageBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
@@ -28,9 +31,17 @@ interface SubjectService {
         limit: Int,
     ): Page<Subject>
 
-    fun getAllBySpecialityIdAndHourlyLoadIdAndCycleId(
-        specialityId: Long,
+    fun getPageBySearchAndStudyPlanIdAndHourlyLoad(
+        search: String,
+        studyPlanId: Long,
         hourlyLoadId: Long,
-        cycleId: Int,
+        offset: Int,
+        limit: Int,
+    ): Page<Subject>
+
+    fun getAllByHourlyLoadIdAndStudyPlanIdAndCycle(
+        hourlyLoadId: Long,
+        studyPlanId: Long,
+        cycle: Int,
     ): List<Subject>
 }

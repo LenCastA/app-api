@@ -16,16 +16,19 @@ class SubjectServiceImpl(
 
     override fun getAllByStudyPlanId(studyPlanId: Long): List<Subject> = subjectRepository.getAllByStudyPlanId(studyPlanId)
 
-    override fun getAllBySpecialityId(
-        specialityId: Long,
-        hourlyLoadId: Long,
-    ): List<Subject> = subjectRepository.getAllBySpecialityId(specialityId, hourlyLoadId)
-
     override fun getAllBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
         specialityId: Long,
         hourlyLoadId: Long,
     ): List<Subject> = subjectRepository.getAllBySearchAndSpecialityIdAndHourlyLoad(search, specialityId, hourlyLoadId)
+
+    override fun getPageBySearchAndFacultyIdAndHourlyLoad(
+        search: String,
+        facultyId: Long,
+        hourlyLoadId: Long,
+        offset: Int,
+        limit: Int,
+    ): Page<Subject> = subjectRepository.getPageBySearchAndFacultyIdAndHourlyLoad(search, facultyId, hourlyLoadId, offset, limit)
 
     override fun getPageBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
@@ -35,9 +38,17 @@ class SubjectServiceImpl(
         limit: Int,
     ): Page<Subject> = subjectRepository.getPageBySearchAndSpecialityIdAndHourlyLoad(search, specialityId, hourlyLoadId, offset, limit)
 
-    override fun getAllBySpecialityIdAndHourlyLoadIdAndCycleId(
-        specialityId: Long,
+    override fun getPageBySearchAndStudyPlanIdAndHourlyLoad(
+        search: String,
+        studyPlanId: Long,
         hourlyLoadId: Long,
-        cycleId: Int,
-    ): List<Subject> = subjectRepository.getAllBySpecialityIdAndHourlyLoadIdAndCycleId(specialityId, hourlyLoadId, cycleId)
+        offset: Int,
+        limit: Int,
+    ): Page<Subject> = subjectRepository.getPageBySearchAndStudyPlanIdAndHourlyLoad(search, studyPlanId, hourlyLoadId, offset, limit)
+
+    override fun getAllByHourlyLoadIdAndStudyPlanIdAndCycle(
+        hourlyLoadId: Long,
+        studyPlanId: Long,
+        cycle: Int,
+    ): List<Subject> = subjectRepository.getAllByHourlyLoadIdAndStudyPlanIdAndCycle(hourlyLoadId, studyPlanId, cycle)
 }
