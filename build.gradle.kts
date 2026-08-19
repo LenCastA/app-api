@@ -161,7 +161,9 @@ tasks.register<Exec>("installGitHooks") {
     description = "Links the local Git hooks directory to the shared .githooks folder"
     group = "verification"
 
-    val os = System.getProperty("os.name").lowercase()
+    onlyIf("Git hooks are only installed from a Git working tree") {
+        rootDir.resolve(".git").isDirectory
+    }
 
     commandLine("git", "config", "core.hooksPath", ".githooks")
 
