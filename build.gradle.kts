@@ -176,6 +176,3 @@ tasks.register<Exec>("installGitHooks") {
 tasks.named("prepareKotlinBuildScriptModel") {
     dependsOn("installGitHooks")
 }
-tasks.named("build") {
-    dependsOn("installGitHooks")
-}
