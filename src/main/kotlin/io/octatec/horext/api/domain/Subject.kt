@@ -11,7 +11,7 @@ data class Subject(
     var cycle: Int?,
     var relationships: List<SubjectRelationship> = ArrayList(),
     var specialityCodes: List<String> = emptyList(),
-    var recommended: Boolean = false,
+    var recommended: Boolean? = null,
     var createdAt: Instant? = null,
     var updatedAt: Instant? = null,
 ) {
