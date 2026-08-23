@@ -1,5 +1,6 @@
 package db.migration
 
+import db.csv.CsvSource
 import io.octatec.horext.api.repository.table.Courses
 import io.octatec.horext.api.repository.table.OrganizationUnits
 import io.octatec.horext.api.repository.table.StudyPlans
@@ -13,10 +14,14 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import org.springframework.jdbc.datasource.SingleConnectionDataSource
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -181,11 +186,25 @@ class R__050_SeedStudyPlans : BaseCsvMigration() {
             val studyPlanCode = requiredValue(row, iCode, COL_STUDY_PLAN_CODE, table.path)
             val organizationUnitCode =
                 requiredValue(row, iOrganizationUnit, COL_ORGANIZATION_UNIT_CODE, table.path)
+            val fromDate =
+                parseOptionalInstant(
+                    value = value(row, iFromDate),
+                    field = COL_FROM_DATE,
+                    path = table.path,
+                    rowNumber = row.rowNumber,
+                )
+            val sourceChecksum =
+                calculateStudyPlanChecksum(
+                    code = studyPlanCode,
+                    fromDate = fromDate,
+                    organizationUnitCode = organizationUnitCode,
+                )
 
             val organizationUnitId =
                 OrganizationUnits
-                    .selectAll()
+                    .select(OrganizationUnits.id)
                     .where { OrganizationUnits.code eq organizationUnitCode }
+                    .limit(1)
                     .firstOrNull()
                     ?.get(OrganizationUnits.id)
                     ?.value
@@ -194,20 +213,45 @@ class R__050_SeedStudyPlans : BaseCsvMigration() {
                             "for study plan '$studyPlanCode' at row ${row.rowNumber} in '${table.path}'",
                     )
 
-            StudyPlans.upsert(StudyPlans.code) {
-                it[StudyPlans.code] = studyPlanCode
-                it[StudyPlans.fromDate] =
-                    parseOptionalInstant(
-                        value = value(row, iFromDate),
-                        field = COL_FROM_DATE,
-                        path = table.path,
-                        rowNumber = row.rowNumber,
-                    )
-                it[StudyPlans.organizationUnitId] =
-                    EntityID(organizationUnitId, OrganizationUnits)
+            val existingStudyPlan =
+                StudyPlans
+                    .select(StudyPlans.sourceChecksum)
+                    .where { StudyPlans.code eq studyPlanCode }
+                    .limit(1)
+                    .firstOrNull()
+
+            if (existingStudyPlan?.get(StudyPlans.sourceChecksum) == sourceChecksum) {
+                continue
+            }
+
+            if (existingStudyPlan == null) {
+                StudyPlans.insert {
+                    it[StudyPlans.code] = studyPlanCode
+                    it[StudyPlans.fromDate] = fromDate
+                    it[StudyPlans.organizationUnitId] =
+                        EntityID(organizationUnitId, OrganizationUnits)
+                    it[StudyPlans.sourceChecksum] = sourceChecksum
+                }
+            } else {
+                StudyPlans.update({ StudyPlans.code eq studyPlanCode }) {
+                    it[StudyPlans.fromDate] = fromDate
+                    it[StudyPlans.organizationUnitId] = EntityID(organizationUnitId, OrganizationUnits)
+                    it[StudyPlans.updatedAt] = Instant.now()
+                    it[StudyPlans.sourceChecksum] = sourceChecksum
+                }
             }
         }
     }
+
+    private fun calculateStudyPlanChecksum(
+        code: String,
+        fromDate: Instant?,
+        organizationUnitCode: String,
+    ): String =
+        MessageDigest
+            .getInstance("SHA-256")
+            .digest(listOf(code, fromDate?.toString().orEmpty(), organizationUnitCode).joinToString("\u0000").toByteArray())
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 
     private fun org.jetbrains.exposed.v1.jdbc.JdbcTransaction.seedAllSubjects() {
         val allStudyPlans =
@@ -292,6 +336,7 @@ class R__050_SeedStudyPlans : BaseCsvMigration() {
             Courses.upsert {
                 it[Courses.id] = EntityID(courseCode, Courses)
                 it[Courses.name] = courseName.takeIf { name -> name.isNotBlank() }
+                it[Courses.updatedAt] = Instant.now()
             }
         }
 
@@ -319,6 +364,7 @@ class R__050_SeedStudyPlans : BaseCsvMigration() {
             ) {
                 it[Subjects.courseId] = EntityID(courseCode, Courses)
                 it[Subjects.studyPlanId] = EntityID(planId, StudyPlans)
+                it[Subjects.updatedAt] = Instant.now()
 
                 it[Subjects.credits] =
                     parseOptionalInt(
@@ -567,48 +613,28 @@ class R__050_SeedStudyPlans : BaseCsvMigration() {
 
     private fun readCsv(path: String): CsvTable? {
         val stream = openClasspathResource(path) ?: return null
+        var headers = emptyList<String>()
+        val rows =
+            CsvSource(requireConsistentRecords = false)
+                .read(
+                    file = path,
+                    input = stream,
+                    onHeaders = { parsed ->
+                        headers =
+                            parsed.mapIndexed { index, value ->
+                                (if (index == 0) value.removePrefix("\uFEFF") else value).trim()
+                            }
+                    },
+                ) { context ->
+                    CsvRow(
+                        rowNumber = context.rowNumber.toInt(),
+                        values = context.record.toList(),
+                    )
+                }.filterNot { row -> row.values.all { it.isBlank() } }
 
-        return bomAwareReader(stream).useLines { sequence ->
-            val lines =
-                sequence
-                    .filter { it.isNotBlank() }
-                    .toList()
-
-            if (lines.isEmpty()) {
-                error("CSV file '$path' is empty")
-            }
-
-            val headers =
-                parseCsvLine(lines.first()).mapIndexed { index, value ->
-                    (if (index == 0) value.removePrefix("\uFEFF") else value).trim()
-                }
-
-            require(headers.any { it.isNotBlank() }) {
-                "CSV file '$path' has an empty header"
-            }
-
-            val rows =
-                lines
-                    .drop(1)
-                    .mapIndexedNotNull { index, line ->
-                        val values = parseCsvLine(line)
-
-                        if (values.all { it.isBlank() }) {
-                            return@mapIndexedNotNull null
-                        }
-
-                        CsvRow(
-                            rowNumber = index + 2,
-                            values = values,
-                        )
-                    }
-
-            CsvTable(
-                path = path,
-                headers = headers,
-                rows = rows,
-            )
-        }
+        if (headers.isEmpty()) error("CSV file '$path' is empty")
+        require(headers.any { it.isNotBlank() }) { "CSV file '$path' has an empty header" }
+        return CsvTable(path = path, headers = headers, rows = rows)
     }
 
     private fun requiredValue(

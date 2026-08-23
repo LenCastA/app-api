@@ -9,11 +9,9 @@ interface SubjectService {
 
     fun getAllByStudyPlanId(studyPlanId: Long): List<Subject>
 
-    fun getAllBySearchAndSpecialityIdAndHourlyLoad(
-        search: String,
-        specialityId: Long,
-        hourlyLoadId: Long,
-    ): List<Subject>
+    fun getById(id: Long): Subject
+
+    fun getAllByIds(ids: List<Long>): List<Subject>
 
     fun getPageBySearchAndFacultyIdAndHourlyLoad(
         search: String,

@@ -1,5 +1,7 @@
 package io.octatec.horext.api.domain
 
+import java.time.Instant
+
 data class Subject(
     val id: Long,
     var course: Course?,
@@ -10,6 +12,8 @@ data class Subject(
     var relationships: List<SubjectRelationship> = ArrayList(),
     var specialityCodes: List<String> = emptyList(),
     var recommended: Boolean = false,
+    var createdAt: Instant? = null,
+    var updatedAt: Instant? = null,
 ) {
     constructor(id: Long) : this(id, null, null, null, null, null)
 }

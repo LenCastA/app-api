@@ -1,5 +1,7 @@
 package db.migration
 
+import db.csv.CsvLimits
+import db.migration.schema.hourlyLoadCsvSchema
 import io.octatec.horext.api.repository.table.AcademicPeriodOrganizationUnits
 import io.octatec.horext.api.repository.table.AcademicPeriods
 import io.octatec.horext.api.repository.table.ClassSessionTypes
@@ -15,10 +17,7 @@ import io.octatec.horext.api.repository.table.StudyPlans
 import io.octatec.horext.api.repository.table.Subjects
 import io.octatec.horext.api.repository.table.Teachers
 import org.flywaydb.core.api.migration.Context
-import org.jetbrains.exposed.v1.core.IntegerColumnType
 import org.jetbrains.exposed.v1.core.JoinType
-import org.jetbrains.exposed.v1.core.LongColumnType
-import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
@@ -27,6 +26,7 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.batchUpsert
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
@@ -40,7 +40,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 class R__200_GenerateHourlyLoad : BaseCsvMigration() {
     companion object {
@@ -85,6 +84,15 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         val day: String,
     )
 
+    private data class ResolvedClassSession(
+        val day: Int,
+        val startTime: LocalTime,
+        val endTime: LocalTime,
+        val typeId: Long,
+        val classroomId: Long,
+        val teacherId: Long,
+    )
+
     private fun normalizeTeacherName(value: String): String = value.trim().ifBlank { "NN" }
 
     override fun getChecksum(): Int = buildChecksum(prefix = "hl_")
@@ -116,8 +124,9 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         for ((facultyCode, facultyRows) in rowsByFaculty) {
             val faculty =
                 OrganizationUnits
-                    .selectAll()
+                    .select(OrganizationUnits.id)
                     .where { OrganizationUnits.code eq facultyCode }
+                    .limit(1)
                     .firstOrNull() ?: error("Faculty not found with code: $facultyCode")
             val facultyId = faculty[OrganizationUnits.id].value
             validateFaculty(facultyCode, facultyId, facultyRows)
@@ -237,8 +246,9 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
 
         val apId =
             AcademicPeriods
-                .selectAll()
+                .select(AcademicPeriods.id)
                 .where { AcademicPeriods.code eq meta.academicCode }
+                .limit(1)
                 .firstOrNull()
                 ?.get(AcademicPeriods.id)
                 ?.value
@@ -246,11 +256,12 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
 
         val apouId =
             AcademicPeriodOrganizationUnits
-                .selectAll()
+                .select(AcademicPeriodOrganizationUnits.id)
                 .where {
                     (AcademicPeriodOrganizationUnits.academicPeriodId eq apId) and
                         (AcademicPeriodOrganizationUnits.organizationUnitId eq facultyId)
-                }.firstOrNull()
+                }.limit(1)
+                .firstOrNull()
                 ?.get(AcademicPeriodOrganizationUnits.id)
                 ?.value
                 ?: error("APOU for period '${meta.academicCode}' + faculty not found — run R__UpdateAcademicPeriods first")
@@ -292,12 +303,12 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
                     .any()
             if (exactMatchExists) continue
 
-            val byName =
+            val teacherWithNameExists =
                 Teachers
-                    .select(Teachers.id, Teachers.code)
+                    .select(Teachers.id)
                     .where { Teachers.fullName eq csvName }
-                    .firstOrNull()
-            if (byName != null) {
+                    .any()
+            if (teacherWithNameExists) {
                 continue
             }
 
@@ -332,7 +343,8 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
                 ).where {
                     (HourlyLoads.academicPeriodOrganizationUnitId eq apouId) and
                         (HourlyLoads.name eq meta.hourlyLoadName)
-                }.firstOrNull()
+                }.limit(1)
+                .firstOrNull()
 
         if (existingHourlyLoad != null) {
             val hourlyLoadId = existingHourlyLoad[HourlyLoads.id].value
@@ -413,10 +425,9 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         val existingCourseSections =
             ScheduleSubjects
                 .join(Schedules, JoinType.INNER, ScheduleSubjects.scheduleId, Schedules.id)
-                .join(Subjects, JoinType.INNER, ScheduleSubjects.subjectId, Subjects.id)
-                .select(Subjects.courseId, Schedules.sectionId)
+                .select(Schedules.courseId, Schedules.sectionId)
                 .where { ScheduleSubjects.hourlyLoadId eq hourlyLoadId }
-                .map { it[Subjects.courseId].value to it[Schedules.sectionId].value }
+                .map { it[Schedules.courseId].value to it[Schedules.sectionId].value }
                 .distinct()
                 .toSet()
 
@@ -507,6 +518,7 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
             Schedules
                 .insertAndGetId {
                     it[Schedules.sectionId] = EntityID(section, Sections)
+                    it[Schedules.courseId] = EntityID(courseCode, Courses)
                     it[Schedules.vacancies] = vacancies
                 }.value
 
@@ -554,11 +566,10 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         val scheduleIds =
             ScheduleSubjects
                 .join(Schedules, JoinType.INNER, ScheduleSubjects.scheduleId, Schedules.id)
-                .join(Subjects, JoinType.INNER, ScheduleSubjects.subjectId, Subjects.id)
                 .select(ScheduleSubjects.scheduleId)
                 .where {
                     (Schedules.sectionId eq EntityID(section, Sections)) and
-                        (Subjects.courseId eq EntityID(courseCode, Courses)) and
+                        (Schedules.courseId eq EntityID(courseCode, Courses)) and
                         (ScheduleSubjects.hourlyLoadId eq hourlyLoadId)
                 }.map { it[ScheduleSubjects.scheduleId].value }
                 .distinct()
@@ -678,13 +689,6 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
                 .groupBy({ it.first }, { it.second })
                 .mapValues { (_, ids) -> ids.min() }
 
-        val conflictClause =
-            if (onConflictDoNothing) {
-                "ON CONFLICT ON CONSTRAINT class_session_pk DO NOTHING"
-            } else {
-                "ON CONFLICT ON CONSTRAINT class_session_pk DO UPDATE SET deleted_at = NULL"
-            }
-
         val unresolvedTypeCodes = typeCodes.filter { typeIdByCode[it] == null }
         val unresolvedClassrooms = classroomCodes.filter { roomIdByCode[it] == null }
         if (unresolvedClassrooms.isNotEmpty()) {
@@ -703,55 +707,78 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
             )
         }
 
-        val valuePlaceholders = sessions.joinToString(", ") { "(?, ?::time, ?::time, ?, ?, ?, ?)" }
-        val args =
-            buildList {
-                for (r in sessions) {
-                    val dayNum = dayNameToNumber(r.day)
-                    val typeId = typeIdByCode[r.sessionType]
-                    val roomId =
-                        roomIdByCode[r.classroom.trim()]
-                            ?: error(
-                                "R__200: classroom '${r.classroom}' not found for scheduleId=$scheduleId",
-                            )
-                    val tid =
-                        if (r.teacherDni?.isNotBlank() == true) {
-                            val normalizedName = normalizeTeacherName(r.teacherName)
-                            teacherIdByDniAndName[Pair(r.teacherDni, normalizedName)]
-                                ?: teacherIdByName[normalizedName]
-                                ?: teacherIdByDni[r.teacherDni]
-                        } else {
-                            teacherIdByName[normalizeTeacherName(r.teacherName)]
-                        }
-                    add(IntegerColumnType() to dayNum)
-                    add(VarCharColumnType() to r.endTime)
-                    add(VarCharColumnType() to r.startTime)
-                    add(LongColumnType() to typeId)
-                    add(LongColumnType() to roomId)
-                    add(LongColumnType() to scheduleId)
-                    add(LongColumnType() to tid)
-                }
+        val resolvedSessions =
+            sessions.map { session ->
+                val normalizedTeacherName = normalizeTeacherName(session.teacherName)
+                val teacherId =
+                    if (session.teacherDni?.isNotBlank() == true) {
+                        teacherIdByDniAndName[session.teacherDni to normalizedTeacherName]
+                            ?: teacherIdByName[normalizedTeacherName]
+                            ?: teacherIdByDni[session.teacherDni]
+                    } else {
+                        teacherIdByName[normalizedTeacherName]
+                    }
+
+                ResolvedClassSession(
+                    day = dayNameToNumber(session.day) ?: error("Unknown day '${session.day}' for scheduleId=$scheduleId"),
+                    startTime = LocalTime.parse(session.startTime),
+                    endTime = LocalTime.parse(session.endTime),
+                    typeId =
+                        typeIdByCode[session.sessionType]
+                            ?: error("Class session type '${session.sessionType}' not found for scheduleId=$scheduleId"),
+                    classroomId =
+                        roomIdByCode[session.classroom.trim()]
+                            ?: error("Classroom '${session.classroom}' not found for scheduleId=$scheduleId"),
+                    teacherId = teacherId ?: error("Teacher '${session.teacherName}' not found for scheduleId=$scheduleId"),
+                )
             }
 
         try {
-            exec(
-                """
-                INSERT INTO class_session
-                    (day, end_time, start_time, class_session_type_id, classroom_id, schedule_id, teacher_id)
-                VALUES $valuePlaceholders
-                $conflictClause
-                """.trimIndent(),
-                args,
-            )
+            if (onConflictDoNothing) {
+                ClassSessions.batchInsert(
+                    data = resolvedSessions,
+                    ignore = true,
+                    shouldReturnGeneratedValues = false,
+                ) { session ->
+                    this[ClassSessions.day] = session.day
+                    this[ClassSessions.startTime] = session.startTime
+                    this[ClassSessions.endTime] = session.endTime
+                    this[ClassSessions.classSessionTypeId] = EntityID(session.typeId, ClassSessionTypes)
+                    this[ClassSessions.classroomId] = EntityID(session.classroomId, Classrooms)
+                    this[ClassSessions.scheduleId] = EntityID(scheduleId, Schedules)
+                    this[ClassSessions.teacherId] = EntityID(session.teacherId, Teachers)
+                }
+            } else {
+                ClassSessions.batchUpsert(
+                    data = resolvedSessions,
+                    ClassSessions.scheduleId,
+                    ClassSessions.day,
+                    ClassSessions.startTime,
+                    ClassSessions.endTime,
+                    ClassSessions.teacherId,
+                    ClassSessions.classroomId,
+                    ClassSessions.classSessionTypeId,
+                    onUpdate = { statement -> statement[ClassSessions.deletedAt] = null },
+                    shouldReturnGeneratedValues = false,
+                ) { session ->
+                    this[ClassSessions.day] = session.day
+                    this[ClassSessions.startTime] = session.startTime
+                    this[ClassSessions.endTime] = session.endTime
+                    this[ClassSessions.classSessionTypeId] = EntityID(session.typeId, ClassSessionTypes)
+                    this[ClassSessions.classroomId] = EntityID(session.classroomId, Classrooms)
+                    this[ClassSessions.scheduleId] = EntityID(scheduleId, Schedules)
+                    this[ClassSessions.teacherId] = EntityID(session.teacherId, Teachers)
+                }
+            }
         } catch (e: Exception) {
             val sample = sessions.firstOrNull()
             log.error(
-                "R__200: class_session insert failed scheduleId={} rows={} conflictClause='{}'" +
+                "R__200: class_session insert failed scheduleId={} rows={} conflictMode='{}'" +
                     " unresolvedTypes={} unresolvedClassrooms={} unresolvedTeachersByDni={} unresolvedTeachersByName={}" +
                     " sampleDni={} sampleName={} message={}",
                 scheduleId,
                 sessions.size,
-                conflictClause,
+                if (onConflictDoNothing) "DO_NOTHING" else "REACTIVATE",
                 unresolvedTypeCodes,
                 unresolvedClassrooms,
                 unresolvedTeachersByDni,
@@ -864,105 +891,10 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         resourcePath: String,
         defaultFacultyCode: String,
     ): List<ScheduleResume> {
-        val stream = openClasspathResource(resourcePath) ?: return emptyList()
-        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+        val source = openClasspathResource(resourcePath) ?: return emptyList()
+        val defaultUpdatedAt = LocalDateTime.now()
+        val schema = hourlyLoadCsvSchema(defaultFacultyCode, defaultUpdatedAt)
 
-        fun parseTime(s: String): String {
-            val trimmed = s.trim()
-            if (trimmed.isBlank()) return ""
-
-            val hour = trimmed.toIntOrNull()
-            return if (hour != null) {
-                LocalTime.of(hour, 0).format(timeFmt)
-            } else {
-                LocalTime.parse(trimmed).format(timeFmt)
-            }
-        }
-        return bomAwareReader(stream).useLines { lines ->
-            val iter = lines.filter { it.isNotBlank() }.iterator()
-            if (!iter.hasNext()) return@useLines emptyList()
-            val headerLine = iter.next()
-            val delimiter = if (headerLine.contains(';')) ';' else ','
-            val header = parseCsvLine(headerLine, delimiter).map { it.trim().lowercase() }
-
-            fun idx(name: String) =
-                header.indexOf(name).also {
-                    require(it >= 0) { "Column '$name' not found in CSV header of $resourcePath" }
-                }
-
-            fun optIdx(name: String) = header.indexOf(name).takeIf { it >= 0 }
-            val iCodigoFacultad = optIdx(COL_FACULTY_CODE)
-            val iCurso = idx(COL_COURSE)
-            val iSeccion = idx(COL_SECTION)
-            val iVacantes = optIdx(COL_VACANCIES)
-            val iUpdatedAt = optIdx(COL_UPDATED_AT)
-            val iDeletedAt = optIdx(COL_DELETED_AT)
-            val defaultUpdatedAt = LocalDateTime.now()
-            val iInicio = idx(COL_START_TIME)
-            val iFin = idx(COL_END_TIME)
-            val iAula = optIdx(COL_CLASSROOM)
-            val iDni = optIdx(COL_DNI)
-            val iDocente = idx(COL_TEACHER)
-            val iTipo = optIdx(COL_TYPE)
-            val iDia = idx(COL_DAY)
-            iter
-                .asSequence()
-                .map { line -> parseCsvLine(line, delimiter) }
-                .filter { cols -> cols.any { it.isNotBlank() } }
-                .map { cols ->
-                    ScheduleResume(
-                        facultyCode =
-                            iCodigoFacultad
-                                ?.let { index -> cols.getOrNull(index)?.trim()?.takeIf { it.isNotBlank() } }
-                                ?: defaultFacultyCode,
-                        course = cols[iCurso].trim().replace("-", ""),
-                        section = cols[iSeccion].trim(),
-                        vacancies =
-                            if (iVacantes == null || cols.getOrNull(iVacantes).isNullOrBlank()) {
-                                0
-                            } else {
-                                cols[iVacantes].trim().toInt()
-                            },
-                        updatedAt =
-                            iUpdatedAt
-                                ?.let { index ->
-                                    cols
-                                        .getOrNull(index)
-                                        ?.trim()
-                                        ?.takeIf { it.isNotBlank() }
-                                        ?.let { LocalDateTime.parse(it, fmt) }
-                                }
-                                ?: defaultUpdatedAt,
-                        deletedAt =
-                            if (iDeletedAt != null) {
-                                cols[iDeletedAt].takeIf { it.isNotBlank() }?.let { LocalDateTime.parse(it, fmt) }
-                            } else {
-                                null
-                            },
-                        startTime = parseTime(cols[iInicio]),
-                        endTime = parseTime(cols[iFin]),
-                        classroom =
-                            iAula
-                                ?.let { index -> cols.getOrNull(index) }
-                                ?.trim()
-                                ?.uppercase()
-                                ?.takeIf { it.isNotBlank() }
-                                ?: DEFAULT_CLASSROOM_CODE,
-                        teacherDni =
-                            iDni
-                                ?.let { index -> cols.getOrNull(index)?.trim()?.takeIf { it.isNotBlank() } },
-                        teacherName = normalizeTeacherName(cols[iDocente]),
-                        sessionType =
-                            iTipo
-                                ?.let { index -> cols.getOrNull(index) }
-                                ?.trim()
-                                ?.uppercase()
-                                ?.takeIf { it.isNotBlank() }
-                                ?: DEFAULT_SESSION_TYPE_CODE,
-                        day = cols[iDia],
-                    )
-                }.toList()
-        }
+        return source.use { schema.parse(resourcePath, it).rows }
     }
 }

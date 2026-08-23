@@ -6,6 +6,7 @@ import io.octatec.horext.api.dto.Page
 import io.octatec.horext.api.service.SubjectService
 import io.octatec.horext.api.util.Pagination
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -22,6 +23,16 @@ class SubjectController(
         @RequestBody courseIds: Set<String>,
     ): List<CourseAffiliation> = subjectService.getCourseAffiliations(courseIds)
 
+    @GetMapping("{subjectId}")
+    fun getById(
+        @PathVariable subjectId: Long,
+    ): Subject = subjectService.getById(subjectId)
+
+    @GetMapping(params = ["ids", "!search"])
+    fun getAllByIds(
+        @RequestParam ids: List<Long>,
+    ): List<Subject> = subjectService.getAllByIds(ids)
+
     @GetMapping(params = ["search", "speciality", "hourlyLoad"])
     @Deprecated("speciality and hourlyLoad params are deprecated")
     fun getAllBySearch(
@@ -36,26 +47,6 @@ class SubjectController(
             subjectService.getPageBySearchAndSpecialityIdAndHourlyLoad(
                 search,
                 specialityId,
-                hourlyLoadId,
-                offset,
-                limit,
-            )
-        return page
-    }
-
-    @GetMapping(params = ["search", "facultyId", "hourlyLoadId"])
-    fun getPageByFacultyId(
-        @RequestParam(name = "search", required = true) search: String,
-        @RequestParam(name = "facultyId") facultyId: Long,
-        @RequestParam(name = "hourlyLoadId") hourlyLoadId: Long,
-        @RequestParam(name = "offset", defaultValue = "0") offset: Int,
-        @RequestParam(name = "limit", defaultValue = "10") limit: Int,
-    ): Page<Subject> {
-        Pagination.validatePageNumberAndSize(offset, limit)
-        val page =
-            subjectService.getPageBySearchAndFacultyIdAndHourlyLoad(
-                search,
-                facultyId,
                 hourlyLoadId,
                 offset,
                 limit,
@@ -82,36 +73,4 @@ class SubjectController(
             )
         return page
     }
-
-    @GetMapping(params = ["search", "studyPlanId", "hourlyLoadId"])
-    fun getPageBySearch(
-        @RequestParam(name = "search", required = true) search: String,
-        @RequestParam(name = "studyPlanId") studyPlanId: Long,
-        @RequestParam(name = "hourlyLoadId") hourlyLoadId: Long,
-        @RequestParam(name = "offset", defaultValue = "0") offset: Int,
-        @RequestParam(name = "limit", defaultValue = "10") limit: Int,
-    ): Page<Subject> {
-        Pagination.validatePageNumberAndSize(offset, limit)
-        val page =
-            subjectService.getPageBySearchAndStudyPlanIdAndHourlyLoad(
-                search,
-                studyPlanId,
-                hourlyLoadId,
-                offset,
-                limit,
-            )
-        return page
-    }
-
-    @GetMapping(params = ["hourlyLoadId", "studyPlanId", "cycle"])
-    fun getAllByStudyPlanIdAndCycle(
-        @RequestParam(name = "hourlyLoadId") hourlyLoadId: Long,
-        @RequestParam(name = "studyPlanId") studyPlanId: Long,
-        @RequestParam(name = "cycle") cycle: Int,
-    ): List<Subject> =
-        subjectService.getAllByHourlyLoadIdAndStudyPlanIdAndCycle(
-            hourlyLoadId,
-            studyPlanId,
-            cycle,
-        )
 }

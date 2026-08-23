@@ -2,6 +2,7 @@ package io.octatec.horext.api.repository.table
 
 import io.octatec.horext.api.domain.OrganizationUnit
 import io.octatec.horext.api.domain.StudyPlan
+import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.javatime.timestamp
@@ -17,6 +18,15 @@ object StudyPlans : LongIdTable("study_plan") {
 
     val organizationUnitId = reference("organization_unit_id", OrganizationUnits)
 
+    val createdAt = timestamp("created_at")
+
+    val updatedAt = timestamp("updated_at")
+
+    val sourceChecksum = varchar("source_checksum", length = 64).nullable()
+
+    val entityColumns: List<Expression<*>>
+        get() = columns - sourceChecksum
+
     fun createEntity(row: ResultRow): StudyPlan =
         StudyPlan(
             row[id].value,
@@ -26,5 +36,7 @@ object StudyPlans : LongIdTable("study_plan") {
             row[toDate],
             runCatching { OrganizationUnits.createEntity(row) }
                 .getOrElse { OrganizationUnit(id = row[organizationUnitId].value) },
+            row[createdAt],
+            row[updatedAt],
         )
 }

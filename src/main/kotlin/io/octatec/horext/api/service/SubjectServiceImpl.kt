@@ -3,6 +3,7 @@ package io.octatec.horext.api.service
 import io.octatec.horext.api.domain.Subject
 import io.octatec.horext.api.dto.CourseAffiliation
 import io.octatec.horext.api.dto.Page
+import io.octatec.horext.api.exception.ResourceNotFoundException
 import io.octatec.horext.api.repository.SubjectRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,11 +17,9 @@ class SubjectServiceImpl(
 
     override fun getAllByStudyPlanId(studyPlanId: Long): List<Subject> = subjectRepository.getAllByStudyPlanId(studyPlanId)
 
-    override fun getAllBySearchAndSpecialityIdAndHourlyLoad(
-        search: String,
-        specialityId: Long,
-        hourlyLoadId: Long,
-    ): List<Subject> = subjectRepository.getAllBySearchAndSpecialityIdAndHourlyLoad(search, specialityId, hourlyLoadId)
+    override fun getById(id: Long): Subject = subjectRepository.getById(id) ?: throw ResourceNotFoundException("Subject", "id", id)
+
+    override fun getAllByIds(ids: List<Long>): List<Subject> = subjectRepository.getAllByIds(ids)
 
     override fun getPageBySearchAndFacultyIdAndHourlyLoad(
         search: String,

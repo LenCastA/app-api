@@ -5,6 +5,7 @@ import io.octatec.horext.api.repository.table.OrganizationUnits
 import io.octatec.horext.api.repository.table.StudyPlans
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
@@ -13,22 +14,20 @@ import org.springframework.stereotype.Repository
 class StudyPlanRepositoryImpl : StudyPlanRepository {
     override fun getAllStudyPlan(): List<StudyPlan> =
         StudyPlans
-            .selectAll()
-            .orderBy(
-                StudyPlans.fromDate to SortOrder.DESC,
-            ).map { row -> StudyPlans.createEntity(row) }
+            .select(StudyPlans.entityColumns)
+            .orderByNewest()
+            .map { row -> StudyPlans.createEntity(row) }
 
     override fun getStudyPlanById(id: Long): StudyPlan? {
         val sp = StudyPlans
         val ou = OrganizationUnits
         return sp
             .leftJoin(ou)
-            .select(sp.columns + ou.columns)
+            .select(sp.entityColumns + ou.columns)
             .where { (sp.id eq id) }
-            .orderBy(
-                sp.fromDate to SortOrder.DESC,
-            ).map { row -> sp.createEntity(row) }
+            .limit(1)
             .firstOrNull()
+            ?.let(sp::createEntity)
     }
 
     override fun getAllSpecialityId(specialityId: Long): List<StudyPlan> {
@@ -36,10 +35,15 @@ class StudyPlanRepositoryImpl : StudyPlanRepository {
         val ou = OrganizationUnits
         return sp
             .leftJoin(ou)
-            .select(sp.columns + ou.columns)
+            .select(sp.entityColumns + ou.columns)
             .where { (sp.organizationUnitId eq specialityId) }
-            .orderBy(
-                sp.fromDate to SortOrder.DESC,
-            ).map { row -> sp.createEntity(row) }
+            .orderByNewest()
+            .map { row -> sp.createEntity(row) }
     }
+
+    private fun Query.orderByNewest() =
+        orderBy(
+            StudyPlans.fromDate to SortOrder.DESC_NULLS_LAST,
+            StudyPlans.id to SortOrder.DESC,
+        )
 }

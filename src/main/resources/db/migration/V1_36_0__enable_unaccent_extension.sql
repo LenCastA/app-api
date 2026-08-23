@@ -1,1 +1,1 @@
-CREATE EXTENSION IF NOT EXISTS unaccent;
+create extension if not exists unaccent;

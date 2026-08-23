@@ -35,8 +35,8 @@ create table course
     id         varchar(255) not null
         constraint course_pkey
             primary key,
-    created_at timestamp,
-    updated_at timestamp,
+    created_at timestamp not null default now(),
+    updated_at timestamp not null default now(),
     name       varchar(255)
 );
 
@@ -177,6 +177,9 @@ create table schedule
     created_at timestamp default now(),
     updated_at timestamp default now(),
     vacancies  integer,
+    course_id  varchar(255) not null
+        constraint schedule_course_id_fkey
+            references course,
     section_id varchar(255)
         constraint schedule_section_id_fkey
             references section,
@@ -191,6 +194,9 @@ create index schedule_delete_at_index
 
 create index schedule_section_id_idx
     on schedule using hash (section_id);
+
+create index schedule_course_id_idx
+    on schedule (course_id);
 
 create table section_organization_unit
 (
@@ -216,7 +222,10 @@ create table study_plan
     organization_unit_id bigint
         constraint study_plan_organization_unit_id_fkey
             references organization_unit,
-    speciality_id        bigint
+    speciality_id        bigint,
+    created_at           timestamp not null default now(),
+    updated_at           timestamp not null default now(),
+    source_checksum      varchar(64)
 );
 
 
@@ -357,10 +366,10 @@ create table subject
             references study_plan,
     subject_type_id                  bigint
         constraint subject_subject_type_id_fkey
-            references subject_type
+            references subject_type,
+    created_at                       timestamp not null default now(),
+    updated_at                       timestamp not null default now()
 );
-
-
 
 create index subject_evaluation_system_id_idx
     on subject (evaluation_system_id);
