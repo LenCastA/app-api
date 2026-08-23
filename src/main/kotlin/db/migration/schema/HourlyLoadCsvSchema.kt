@@ -82,7 +82,7 @@ fun hourlyLoadCsvSchema(
         mapRow {
             ScheduleResume(
                 facultyCode = faculty() ?: defaultFacultyCode,
-                course = course(),
+                course = course().replace("-", "").trim(),
                 section = section(),
                 vacancies = vacancies(),
                 updatedAt = updatedAt() ?: defaultUpdatedAt,

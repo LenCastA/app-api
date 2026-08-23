@@ -95,4 +95,34 @@ class SubjectServiceImplTest {
         assertEquals(expected, result)
         verify(subjectRepository).getAllByIds(ids)
     }
+
+    @Test
+    fun getPageBySearchAndSpecialityIdAndHourlyLoad_delegatesToRepository() {
+        val subject = Subject(id = 1L).apply { recommended = true }
+        val page =
+            io.octatec.horext.api.dto
+                .Page(offset = 0, limit = 10, totalElements = 1, content = listOf(subject))
+        `when`(subjectRepository.getPageBySearchAndSpecialityIdAndHourlyLoad("SW", 2L, 1L, 0, 10))
+            .thenReturn(page)
+
+        val result = service.getPageBySearchAndSpecialityIdAndHourlyLoad("SW", 2L, 1L, 0, 10)
+
+        assertEquals(page, result)
+        verify(subjectRepository).getPageBySearchAndSpecialityIdAndHourlyLoad("SW", 2L, 1L, 0, 10)
+    }
+
+    @Test
+    fun getPageBySearchAndStudyPlanIdAndHourlyLoad_delegatesToRepository() {
+        val subject = Subject(id = 1L).apply { recommended = true }
+        val page =
+            io.octatec.horext.api.dto
+                .Page(offset = 0, limit = 10, totalElements = 1, content = listOf(subject))
+        `when`(subjectRepository.getPageBySearchAndStudyPlanIdAndHourlyLoad("SW", 4L, 1L, 0, 10))
+            .thenReturn(page)
+
+        val result = service.getPageBySearchAndStudyPlanIdAndHourlyLoad("SW", 4L, 1L, 0, 10)
+
+        assertEquals(page, result)
+        verify(subjectRepository).getPageBySearchAndStudyPlanIdAndHourlyLoad("SW", 4L, 1L, 0, 10)
+    }
 }

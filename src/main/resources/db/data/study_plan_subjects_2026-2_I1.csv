@@ -1,0 +1,91 @@
+course_id,course_name,credits,cycle,subject_type_id,evaluation_system_id,total_weekly_hours,weekly_theory_hours,weekly_practice_hours,weekly_practice_laboratory_hours,weekly_laboratory_hours,max_cycle,min_cycle,note,required_credits,position
+BFI01,Física I,5,1,1,7,6,4,2,,,,,,,1
+BIC01,Introducción a la computación,2,1,1,7,3,1,2,,,,,,,2
+BMA01,Cálculo diferencial,5,1,1,6,6,4,2,,,,,,,3
+BQU01,Química I,5,1,1,7,6,4,2,,,,,,,4
+FB101,Geometría analítica,3,1,1,6,4,2,2,,,,,,,5
+GE101,Introducción a la Ingeniería Industrial,3,1,1,7,4,2,2,,,,,,,6
+BMA02,Cálculo integral,5,2,1,6,6,4,2,,,,,,,7
+BMA03,Álgebra lineal,4,2,1,6,5,3,2,,,,,,,8
+BRC01,Redacción y comunicación,2,2,1,5,3,1,2,,,,,,,9
+FB202,Química II,4,2,1,7,5,3,2,,,,,,,10
+FB401,Física II,5,2,1,7,6,4,2,,,,,,,11
+TE205,Dibujo y geometría descriptiva,2,2,1,5,4,0,4,,,,,,,12
+FB301,Matemática discreta,3,3,1,7,4,2,2,,,,,,,13
+FB303,Cálculo multivariable,5,3,1,7,6,4,2,,,,,,,14
+FB305,Estadística y probabilidades,3,3,1,7,4,2,2,,,,,,,15
+HU102,Desarrollo personal,2,3,1,5,4,0,4,,,,,,,16
+SI205,Algoritmia y estructura de datos,3,3,1,7,4,2,2,,,,,,,17
+TE302,Diseño asistido por computador,3,3,1,5,4,2,2,,,,,,,18
+TE401,Termodinámica,3,3,1,7,4,2,2,,,,,,,19
+BEF01,Ética y filosofía política,2,4,1,5,3,1,2,,,,,,,20
+BEG01,Economía general,3,4,1,7,4,2,2,,,,,,,21
+FB403,Ecuaciones diferenciales,5,4,1,7,6,4,2,,,,,,,22
+FB405,Estadística aplicada,3,4,1,7,4,2,2,,,,,,,23
+SI150,Analítica de datos,3,4,1,7,4,2,2,,,,,,,24
+TE301,Fisicoquímica y operaciones unitarias,4,4,1,7,5,3,2,,,,,,,25
+TE501,Electricidad y Electrónica Industrial,4,4,1,7,5,3,2,,,,,,,26
+BRN01,"Realidad Nacional, Constitución y Derechos Humanos",3,5,1,5,4,2,2,,,,,,,27
+GE502,Ingeniería del trabajo I,3,5,1,6,4,2,2,,,,,,,28
+GE602,Contabilidad financiera,3,5,1,7,4,2,2,,,,,,,29
+GE604,Administración y Organización,3,5,1,7,4,2,2,,,,,,,30
+SI501,Investigación de Operaciones I,3,5,1,7,4,2,2,,,,,,,31
+TE503,Procesos industriales I,4,5,1,7,6,2,4,,,,,,,32
+TE601,Ingeniería de materiales,3,5,1,7,4,2,2,,,,,,,33
+GE603,Ingeniería del trabajo II,3,6,1,7,4,2,2,,,,,,,34
+GE606,Costos y presupuestos,3,6,1,7,4,2,2,,,,,,,35
+SI601,Investigación de Operaciones II,3,6,1,7,4,2,2,,,,,,,36
+TE602,Procesos industriales II,4,6,1,7,6,2,4,,,,,,,37
+TE603,Control estadístico de procesos,3,6,1,7,4,2,2,,,,,,,38
+TE604,Maquinaria e instrumentación industrial,3,6,1,7,4,2,2,,,,,,,39
+GE701,Logística empresarial,3,7,1,7,4,2,2,,,,,,,40
+GE702,Ingeniería económica,3,7,1,7,4,2,2,,,,,,,41
+HU301,Metodología de la Investigación,2,7,1,5,4,0,4,,,,,,,42
+SI701,Modelado sistémico y simulación,3,7,1,7,4,2,2,,,,,,,43
+TE702,Manufactura Inteligente,3,7,1,6,4,2,2,,,,,,,44
+TE703,Ingeniería de procesos,3,7,1,6,4,2,2,,,,,,,45
+GE805,Mercadotecnia,3,8,1,7,4,2,2,,,,,,,46
+GE905,Planeamiento y control de operaciones,3,8,1,7,4,2,2,,,,,,,47
+GE906,Gestión financiera,3,8,1,7,4,2,2,,,,,,,48
+TE802,Ingeniería del producto,3,8,1,7,4,2,2,,,,,,,49
+TE803,Sistemas integrados de calidad,3,8,1,7,4,2,2,,,,,,,50
+GE802,Gestión de la cadena de suministro,3,9,1,7,4,2,2,,,,,,,51
+GE904,Taller de proyecto de investigación,2,9,1,5,4,0,4,,,,,,,52
+SI077,Inteligencia Artificial,3,9,1,7,4,2,2,,,,,,,53
+TE901,Seguridad y salud ocupacional,3,9,1,7,4,2,2,,,,,,,54
+TE903,Automatización,3,9,1,7,4,2,2,,,,,,,55
+GE004,Taller de Investigación,2,10,1,5,4,0,4,,,,,,,56
+GE801,Planeamiento y gestión estratégica,3,10,1,7,4,2,2,,,,,,,57
+GE902,Diseño y evaluación de proyectos,3,10,1,7,4,2,2,,,,,,,58
+GE903,Gestión del talento humano,3,10,1,7,4,2,2,,,,,,,59
+TE001,Sostenibilidad industrial,3,10,1,6,4,2,2,,,,,,,60
+GE117,Juegos de negocio,2,,4,5,3,1,2,,,,,,,61
+GE121,Diseño y disposición de plantas,3,,4,7,4,2,2,,,,,,,62
+HU111,Legislación empresarial y tributaria,2,,4,2,2,2,0,,,,,,,63
+HU112,Comportamiento organizacional,2,,4,5,3,1,2,,,,,,,64
+SI111,Teoría de decisiones,3,,4,7,4,2,2,,,,,,,65
+SI114,Base de datos,3,,4,7,4,2,2,,,,,,,66
+GE901,Innovación y emprendimiento de negocios,3,,4,7,4,2,2,,,,,,,67
+SI302,Programación orientada a objetos,3,,4,7,4,2,2,,,,,,,68
+GE703,Sistemas integrados empresariales,3,,4,6,4,2,2,,,,,,,69
+TE121,Ergonomía,3,,4,7,4,2,2,,,,,,,70
+TE122,Procesos agroindustriales,3,,4,7,4,2,2,,,,,,,71
+TE125,Lean manufacturing,3,,4,7,4,2,2,,,,,,,72
+TE701,Análisis de proceso de manufactura,3,,4,7,4,2,2,,,,,,,73
+HU113,Liderazgo y presentación ejecutiva,2,,4,5,4,0,4,,,,,,,74
+SI025,Dirección de proyectos,3,,4,7,4,2,2,,,,,,,75
+GE126,Ingeniería del servicio,3,,4,7,4,2,2,,,,,,,76
+TE124,Gestión de la energía,3,,4,7,4,2,2,,,,,,,77
+TE126,Gestión del mantenimiento,3,,4,7,4,2,2,,,,,,,78
+GE124,Comercio internacional,3,,4,7,4,2,2,,,,,,,79
+GE118,Modelamiento financiero,3,,4,6,4,2,2,,,,,,,80
+GE708,Finanzas corporativas,3,,4,5,4,2,2,,,,,,,81
+GE119,Gestión de riesgo financiero,3,,4,6,4,2,2,,,,,,,82
+SI112,Analítica del negocio,3,,4,7,4,2,2,,,,,,,83
+SI154,Inteligencia de negocios,3,,4,7,4,2,2,,,,,,,84
+TE804,Diseño de sistemas ciberfísicos,3,,4,6,4,2,2,,,,,,,85
+TE129,Tecnologías robóticas en la manufactura moderna,3,,4,7,4,2,2,,,,,,,86
+TE114,Gemelos digitales,3,,4,6,4,2,2,,,,,,,87
+SI822,Machine learning,3,,4,6,4,2,2,,,,,,,88
+TE116,Lean logistics,3,,4,6,4,2,2,,,,,,,89
+TE115,Gestión de riesgos en la cadena de suministros,3,,4,6,4,2,2,,,,,,,90

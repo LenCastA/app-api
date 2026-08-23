@@ -168,6 +168,14 @@ class SubjectRepositoryImpl : SubjectRepository {
             .map(s::createEntity)
     }
 
+    private data class SubjectMatchRow(
+        val subject: Subject,
+        val studyPlanId: Long,
+        val orgUnitId: Long,
+        val orgUnitCode: String,
+        val isLatestPlan: Boolean,
+    )
+
     override fun getPageBySearchAndSpecialityIdAndHourlyLoad(
         search: String,
         specialityId: Long,
@@ -188,6 +196,27 @@ class SubjectRepositoryImpl : SubjectRepository {
                 .firstOrNull()
                 ?.get(ou.parentOrganizationId)
                 ?: return Page(offset, limit, 0, content = emptyList())
+
+        val activePlansInFaculty =
+            sp
+                .innerJoin(ou)
+                .select(sp.id, sp.organizationUnitId, sp.fromDate, ou.code)
+                .where { (ou.parentOrganizationId eq facultyId) and sp.isActive() }
+                .map { row ->
+                    Triple(
+                        row[sp.id].value,
+                        row[sp.organizationUnitId].value,
+                        row[sp.fromDate],
+                    )
+                }
+
+        val latestStudyPlanIds =
+            activePlansInFaculty
+                .groupBy { it.second }
+                .mapValues { (_, plans) -> plans.maxByOrNull { it.third ?: Instant.MIN }!!.first }
+                .values
+                .toSet()
+
         val matches =
             s
                 .innerJoin(c)
@@ -200,17 +229,43 @@ class SubjectRepositoryImpl : SubjectRepository {
                         sp.isActive() and
                         ss.existsForSubjectAndHourlyLoad(s, hourlyLoadId) and
                         c.matchesSearch(search)
-                }.map { row -> Triple(s.createEntity(row), row[ou.id].value, row[ou.code]) }
+                }.map { row ->
+                    SubjectMatchRow(
+                        subject = s.createEntity(row),
+                        studyPlanId = row[sp.id].value,
+                        orgUnitId = row[ou.id].value,
+                        orgUnitCode = row[ou.code],
+                        isLatestPlan = row[sp.id].value in latestStudyPlanIds,
+                    )
+                }
 
         val grouped =
             matches
-                .groupBy { it.first.course?.id }
+                .groupBy { it.subject.course?.id }
                 .values
                 .map { courseMatches ->
-                    val preferred = courseMatches.firstOrNull { it.second == specialityId } ?: courseMatches.first()
-                    preferred.first.apply {
-                        specialityCodes = courseMatches.map { it.third }.distinct().sorted()
-                        recommended = courseMatches.any { it.second == specialityId }
+                    val latestMatches = courseMatches.filter { it.isLatestPlan }
+                    val relevantForCodes = if (latestMatches.isNotEmpty()) latestMatches else courseMatches
+
+                    val specialityCodes =
+                        relevantForCodes
+                            .map { it.orgUnitCode }
+                            .distinct()
+                            .sorted()
+
+                    val isRecommended = courseMatches.any { it.orgUnitId == specialityId }
+
+                    val preferredMatch =
+                        courseMatches.firstOrNull { it.orgUnitId == specialityId && it.isLatestPlan && (it.subject.cycle ?: 0) > 1 }
+                            ?: courseMatches.firstOrNull { it.orgUnitId == specialityId && (it.subject.cycle ?: 0) > 1 }
+                            ?: courseMatches.firstOrNull { it.orgUnitId == specialityId }
+                            ?: latestMatches.maxByOrNull { it.subject.cycle ?: 0 }
+                            ?: courseMatches.maxByOrNull { it.subject.cycle ?: 0 }
+                            ?: courseMatches.first()
+
+                    preferredMatch.subject.apply {
+                        this.specialityCodes = emptyList()
+                        this.recommended = isRecommended
                     }
                 }.sortedWith(compareBy({ it.course?.name.orEmpty() }, { it.course?.id.orEmpty() }))
         return Page(
@@ -234,7 +289,28 @@ class SubjectRepositoryImpl : SubjectRepository {
         val st = SubjectTypes
         val ss = ScheduleSubjects
         val ou = OrganizationUnits
-        val query =
+
+        val activePlansInFaculty =
+            sp
+                .innerJoin(ou)
+                .select(sp.id, sp.organizationUnitId, sp.fromDate, ou.code)
+                .where { (ou.parentOrganizationId eq facultyId) and sp.isActive() }
+                .map { row ->
+                    Triple(
+                        row[sp.id].value,
+                        row[sp.organizationUnitId].value,
+                        row[sp.fromDate],
+                    )
+                }
+
+        val latestStudyPlanIds =
+            activePlansInFaculty
+                .groupBy { it.second }
+                .mapValues { (_, plans) -> plans.maxByOrNull { it.third ?: Instant.MIN }!!.first }
+                .values
+                .toSet()
+
+        val matches =
             s
                 .innerJoin(c)
                 .innerJoin(sp)
@@ -246,8 +322,39 @@ class SubjectRepositoryImpl : SubjectRepository {
                         sp.isActive() and
                         ss.existsForSubjectAndHourlyLoad(s, hourlyLoadId) and
                         c.matchesSearch(search)
-                }.orderByStudyPlanAndCourse(sp, c, s)
-        return query.toSubjectPage(offset, limit)
+                }.map { row ->
+                    SubjectMatchRow(
+                        subject = s.createEntity(row),
+                        studyPlanId = row[sp.id].value,
+                        orgUnitId = row[ou.id].value,
+                        orgUnitCode = row[ou.code],
+                        isLatestPlan = row[sp.id].value in latestStudyPlanIds,
+                    )
+                }
+
+        val grouped =
+            matches
+                .groupBy { it.subject.course?.id }
+                .values
+                .map { courseMatches ->
+                    val latestMatches = courseMatches.filter { it.isLatestPlan }
+                    val preferredMatch =
+                        latestMatches.maxByOrNull { it.subject.cycle ?: 0 }
+                            ?: courseMatches.maxByOrNull { it.subject.cycle ?: 0 }
+                            ?: courseMatches.first()
+
+                    preferredMatch.subject.apply {
+                        this.specialityCodes = emptyList()
+                        this.recommended = null
+                    }
+                }.sortedWith(compareBy({ it.course?.name.orEmpty() }, { it.course?.id.orEmpty() }))
+
+        return Page(
+            offset = offset,
+            limit = limit,
+            totalElements = grouped.size,
+            content = grouped.drop(offset).take(limit),
+        )
     }
 
     override fun getPageBySearchAndStudyPlanIdAndHourlyLoad(
@@ -276,7 +383,9 @@ class SubjectRepositoryImpl : SubjectRepository {
                         ss.existsForSubjectAndHourlyLoad(s, hourlyLoadId) and
                         c.matchesSearch(search)
                 }.orderByCurriculum(s, c)
-        return query.toSubjectPage(offset, limit)
+        val page = query.toSubjectPage(offset, limit)
+        page.content.forEach { it.recommended = true }
+        return page
     }
 
     override fun getAllByHourlyLoadIdAndStudyPlanIdAndCycle(
