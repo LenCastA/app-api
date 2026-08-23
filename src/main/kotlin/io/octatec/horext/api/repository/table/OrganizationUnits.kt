@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 object OrganizationUnits : LongIdTable("organization_unit") {
     val parentOrganizationId = long("parent_organization_id").nullable()
 
-    val code = varchar("code", length = 50)
+    val code = varchar("code", length = 50).uniqueIndex()
 
     val name = varchar("name", length = 50)
 
