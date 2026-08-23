@@ -1,6 +1,7 @@
 package io.octatec.horext.api.service
 
 import io.octatec.horext.api.domain.Subject
+import io.octatec.horext.api.dto.CourseAffiliation
 import io.octatec.horext.api.dto.Page
 import io.octatec.horext.api.exception.ResourceNotFoundException
 import io.octatec.horext.api.repository.SubjectRepository
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional
 class SubjectServiceImpl(
     private val subjectRepository: SubjectRepository,
 ) : SubjectService {
+    override fun getCourseAffiliations(courseIds: Set<String>): List<CourseAffiliation> = subjectRepository.getCourseAffiliations(courseIds)
+
     override fun getAllByStudyPlanId(studyPlanId: Long): List<Subject> = subjectRepository.getAllByStudyPlanId(studyPlanId)
 
     override fun getById(id: Long): Subject = subjectRepository.getById(id) ?: throw ResourceNotFoundException("Subject", "id", id)

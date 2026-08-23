@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional
 class HourlyLoadServiceImpl(
     private val hourlyLoadRepository: HourlyLoadRepository,
 ) : HourlyLoadService {
+    override fun getAllByFaculty(facultyId: Long): List<HourlyLoad> = hourlyLoadRepository.getAllByFaculty(facultyId)
+
     override fun getLatestByFaculty(facultyId: Long): HourlyLoad =
         hourlyLoadRepository.getLatestByFaculty(facultyId)
             ?: throw ResourceNotFoundException("No se encontro carga horaria para la facultad con id '$facultyId'")

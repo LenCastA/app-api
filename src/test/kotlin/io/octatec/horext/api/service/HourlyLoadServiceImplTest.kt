@@ -25,6 +25,16 @@ class HourlyLoadServiceImplTest {
     }
 
     @Test
+    fun getAllByFaculty_returnsRepositoryResults() {
+        val facultyId = 1L
+        val expected = listOf(HourlyLoad(id = 11L), HourlyLoad(id = 10L))
+        `when`(hourlyLoadRepository.getAllByFaculty(facultyId)).thenReturn(expected)
+
+        assertEquals(expected, service.getAllByFaculty(facultyId))
+        verify(hourlyLoadRepository).getAllByFaculty(facultyId)
+    }
+
+    @Test
     fun getLatestByFaculty_returnsRepositoryResult() {
         val facultyId = 1L
         val expected = HourlyLoad(id = 10L)

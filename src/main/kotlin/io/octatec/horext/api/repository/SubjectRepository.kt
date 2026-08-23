@@ -1,9 +1,12 @@
 package io.octatec.horext.api.repository
 
 import io.octatec.horext.api.domain.Subject
+import io.octatec.horext.api.dto.CourseAffiliation
 import io.octatec.horext.api.dto.Page
 
 interface SubjectRepository {
+    fun getCourseAffiliations(courseIds: Set<String>): List<CourseAffiliation>
+
     fun getAllByStudyPlanId(studyPlanId: Long): List<Subject>
 
     fun getById(id: Long): Subject?

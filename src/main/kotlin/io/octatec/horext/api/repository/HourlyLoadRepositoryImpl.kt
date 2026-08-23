@@ -13,7 +13,7 @@ import java.time.Instant
 
 @Repository
 class HourlyLoadRepositoryImpl : HourlyLoadRepository {
-    override fun getLatestByFaculty(facultyId: Long): HourlyLoad? {
+    override fun getAllByFaculty(facultyId: Long): List<HourlyLoad> {
         val hl = HourlyLoads
         val apou = AcademicPeriodOrganizationUnits
         return hl
@@ -25,8 +25,8 @@ class HourlyLoadRepositoryImpl : HourlyLoadRepository {
             }.orderBy(
                 hl.publishedAt to SortOrder.DESC,
                 hl.id to SortOrder.DESC,
-            ).limit(1)
-            .firstOrNull()
-            ?.let(hl::createEntity)
+            ).map { row -> hl.createEntity(row) }
     }
+
+    override fun getLatestByFaculty(facultyId: Long): HourlyLoad? = getAllByFaculty(facultyId).firstOrNull()
 }

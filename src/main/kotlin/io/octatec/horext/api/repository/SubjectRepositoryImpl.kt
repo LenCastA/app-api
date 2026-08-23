@@ -2,6 +2,8 @@ package io.octatec.horext.api.repository
 
 import io.octatec.horext.api.domain.OrganizationUnit
 import io.octatec.horext.api.domain.Subject
+import io.octatec.horext.api.dto.CourseAffiliation
+import io.octatec.horext.api.dto.OrganizationUnitSummary
 import io.octatec.horext.api.dto.Page
 import io.octatec.horext.api.repository.table.Courses
 import io.octatec.horext.api.repository.table.OrganizationUnits
@@ -16,6 +18,7 @@ import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.anyFrom
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.exists
 import org.jetbrains.exposed.v1.core.inList
@@ -24,11 +27,74 @@ import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
 @Repository
 class SubjectRepositoryImpl : SubjectRepository {
+    override fun getCourseAffiliations(courseIds: Set<String>): List<CourseAffiliation> {
+        if (courseIds.isEmpty()) return emptyList()
+
+        val subject = Subjects
+        val studyPlan = StudyPlans
+        val speciality = OrganizationUnits
+        val courseEntityIds = courseIds.map { EntityID(it, Courses) }
+        val rows =
+            subject
+                .innerJoin(studyPlan)
+                .innerJoin(speciality)
+                .select(
+                    subject.courseId,
+                    speciality.id,
+                    speciality.code,
+                    speciality.name,
+                    speciality.parentOrganizationId,
+                ).where { subject.courseId inList courseEntityIds }
+                .toList()
+
+        val facultyIds = rows.mapNotNull { it[speciality.parentOrganizationId] }.distinct()
+        val facultiesById =
+            if (facultyIds.isEmpty()) {
+                emptyMap()
+            } else {
+                speciality
+                    .selectAll()
+                    .where {
+                        speciality.id inList facultyIds.map { EntityID(it, speciality) }
+                    }.associate { row ->
+                        row[speciality.id].value to
+                            OrganizationUnitSummary(
+                                id = row[speciality.id].value,
+                                code = row[speciality.code],
+                                name = row[speciality.name],
+                            )
+                    }
+            }
+
+        return rows
+            .groupBy { it[subject.courseId].value }
+            .map { (courseId, courseRows) ->
+                val specialities =
+                    courseRows
+                        .distinctBy { it[speciality.id].value }
+                        .map { row ->
+                            OrganizationUnitSummary(
+                                id = row[speciality.id].value,
+                                code = row[speciality.code],
+                                name = row[speciality.name],
+                                parentId = row[speciality.parentOrganizationId],
+                            )
+                        }.sortedBy { it.code }
+                val faculties =
+                    courseRows
+                        .mapNotNull { row -> row[speciality.parentOrganizationId]?.let(facultiesById::get) }
+                        .distinctBy { it.id }
+                        .sortedBy { it.code }
+                CourseAffiliation(courseId, faculties, specialities)
+            }.sortedBy { it.courseId }
+    }
+
     override fun getAllByStudyPlanId(studyPlanId: Long): List<Subject> {
         val s = Subjects
         val c = Courses
@@ -115,7 +181,14 @@ class SubjectRepositoryImpl : SubjectRepository {
         val st = SubjectTypes
         val ss = ScheduleSubjects
         val ou = OrganizationUnits
-        val query =
+        val facultyId =
+            ou
+                .select(ou.parentOrganizationId)
+                .where { ou.id eq specialityId }
+                .firstOrNull()
+                ?.get(ou.parentOrganizationId)
+                ?: return Page(offset, limit, 0, content = emptyList())
+        val matches =
             s
                 .innerJoin(c)
                 .innerJoin(sp)
@@ -123,12 +196,29 @@ class SubjectRepositoryImpl : SubjectRepository {
                 .leftJoin(st)
                 .select(s.entityColumns + c.columns + sp.entityColumns + st.columns + ou.columns)
                 .where {
-                    (sp.organizationUnitId eq specialityId) and
+                    (ou.parentOrganizationId eq facultyId) and
                         sp.isActive() and
                         ss.existsForSubjectAndHourlyLoad(s, hourlyLoadId) and
                         c.matchesSearch(search)
-                }.orderByStudyPlanAndCourse(sp, c, s)
-        return query.toSubjectPage(offset, limit)
+                }.map { row -> Triple(s.createEntity(row), row[ou.id].value, row[ou.code]) }
+
+        val grouped =
+            matches
+                .groupBy { it.first.course?.id }
+                .values
+                .map { courseMatches ->
+                    val preferred = courseMatches.firstOrNull { it.second == specialityId } ?: courseMatches.first()
+                    preferred.first.apply {
+                        specialityCodes = courseMatches.map { it.third }.distinct().sorted()
+                        recommended = courseMatches.any { it.second == specialityId }
+                    }
+                }.sortedWith(compareBy({ it.course?.name.orEmpty() }, { it.course?.id.orEmpty() }))
+        return Page(
+            offset = offset,
+            limit = limit,
+            totalElements = grouped.size,
+            content = grouped.drop(offset).take(limit),
+        )
     }
 
     override fun getPageBySearchAndFacultyIdAndHourlyLoad(

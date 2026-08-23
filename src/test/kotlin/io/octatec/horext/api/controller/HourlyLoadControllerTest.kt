@@ -25,6 +25,16 @@ class HourlyLoadControllerTest {
     }
 
     @Test
+    fun getAllByFaculty_returnsServiceResults() {
+        val facultyId = 1L
+        val expected = listOf(HourlyLoad(id = 11L), HourlyLoad(id = 10L))
+        `when`(hourlyLoadService.getAllByFaculty(facultyId)).thenReturn(expected)
+
+        assertEquals(expected, hourlyLoadController.getAllByFaculty(facultyId))
+        verify(hourlyLoadService).getAllByFaculty(facultyId)
+    }
+
+    @Test
     fun getLatestBySpeciality_returnsServiceResult() {
         val facultyId = 1L
         val expected = HourlyLoad(id = 10L)

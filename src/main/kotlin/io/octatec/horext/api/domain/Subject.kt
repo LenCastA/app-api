@@ -10,6 +10,8 @@ data class Subject(
     var credits: Int?,
     var cycle: Int?,
     var relationships: List<SubjectRelationship> = ArrayList(),
+    var specialityCodes: List<String> = emptyList(),
+    var recommended: Boolean = false,
     var createdAt: Instant? = null,
     var updatedAt: Instant? = null,
 ) {
