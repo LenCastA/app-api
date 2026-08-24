@@ -66,13 +66,6 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    doFirst {
-        val envLines = getEnvLines()
-        for (envLine in envLines) {
-            val (key, value) = envLine.split("=", limit = 2)
-            environment[key] = value
-        }
-    }
 }
 
 fun getEnvLines(): List<String> {
