@@ -332,6 +332,7 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
 
         val lastUpdateInstant = lastUpdate.toInstant(ZoneOffset.UTC)
         val checkedAt = meta.fileLastModified ?: Instant.now()
+        val publishedAtInstant = resolveHourlyLoadPublishedAt(meta.hourlyLoadName, meta.fileLastModified)
 
         val existingHourlyLoad =
             HourlyLoads
@@ -367,6 +368,7 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
             if (previousChecksum == meta.sourceChecksum) {
                 HourlyLoads.update({ HourlyLoads.id eq hourlyLoadId }) {
                     it[HourlyLoads.checkedAt] = checkedAt
+                    it[HourlyLoads.publishedAt] = publishedAtInstant
                 }
 
                 log.info(
@@ -456,7 +458,7 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
 
         HourlyLoads.update({ HourlyLoads.id eq hourlyLoadId }) {
             it[HourlyLoads.updatedAt] = lastUpdateInstant
-            it[HourlyLoads.publishedAt] = Instant.now()
+            it[HourlyLoads.publishedAt] = publishedAtInstant
             it[HourlyLoads.checkedAt] = checkedAt
             it[HourlyLoads.sourceChecksum] = meta.sourceChecksum
         }
@@ -898,3 +900,15 @@ class R__200_GenerateHourlyLoad : BaseCsvMigration() {
         return source.use { schema.parse(resourcePath, it).rows }
     }
 }
+
+internal fun resolveHourlyLoadPublishedAt(
+    hourlyLoadName: String,
+    fileLastModified: Instant?,
+): Instant =
+    when (hourlyLoadName) {
+        "Carga Horaria 2025-2 Oficial" -> Instant.parse("2025-08-26T17:00:00Z")
+        "Carga Horaria 2026-1 Oficial" -> Instant.parse("2026-03-12T17:00:00Z")
+        "Carga Horaria 2026-2 Oficial" -> Instant.parse("2026-08-24T17:00:00Z")
+        "Carga Horaria 2026-2 Preliminar V2" -> Instant.parse("2026-08-23T09:23:07Z")
+        else -> fileLastModified ?: Instant.now()
+    }
