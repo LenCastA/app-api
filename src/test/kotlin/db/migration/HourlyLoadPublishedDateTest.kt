@@ -3,6 +3,7 @@ package db.migration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -29,5 +30,13 @@ class HourlyLoadPublishedDateTest {
             val formattedDate = formatter.format(resolvedInstant)
             assertEquals(expectedFormattedDate, formattedDate, "Mismatch for $loadName")
         }
+
+        val official20262Instant = resolveHourlyLoadPublishedAt("Carga Horaria 2026-2 Oficial", fileLastModified = Instant.EPOCH)
+        val expected20262Instant =
+            LocalDate
+                .of(2026, 8, 24)
+                .atStartOfDay(ZoneId.of("America/Lima"))
+                .toInstant()
+        assertEquals(expected20262Instant, official20262Instant, "Instant mismatch for Carga Horaria 2026-2 Oficial")
     }
 }

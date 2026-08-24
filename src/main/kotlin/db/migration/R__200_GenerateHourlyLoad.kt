@@ -908,7 +908,7 @@ internal fun resolveHourlyLoadPublishedAt(
     when (hourlyLoadName) {
         "Carga Horaria 2025-2 Oficial" -> Instant.parse("2025-08-26T17:00:00Z")
         "Carga Horaria 2026-1 Oficial" -> Instant.parse("2026-03-12T17:00:00Z")
-        "Carga Horaria 2026-2 Oficial" -> Instant.parse("2026-08-24T17:00:00Z")
+        "Carga Horaria 2026-2 Oficial" -> Instant.parse("2026-08-24T05:00:00Z")
         "Carga Horaria 2026-2 Preliminar V2" -> Instant.parse("2026-08-23T09:23:07Z")
         else -> fileLastModified ?: Instant.now()
     }
