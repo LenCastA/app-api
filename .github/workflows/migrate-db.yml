@@ -74,19 +74,9 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x gradlew
 
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: app-data
-
       - name: Clone app-data repository
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          gh repo clone ${{ github.repository_owner }}/app-data app-data -- --depth 1
+          git clone --depth 1 https://github.com/LenCastA/app-data.git app-data
 
       - name: Validate CSV data files
         working-directory: app-data
