@@ -15,18 +15,6 @@ on:
         type: boolean
         default: false
     secrets:
-      SERVER_USER:
-        required: true
-      SERVER_IP:
-        required: true
-      SSH_PRIVATE_KEY:
-        required: true
-      ENV_FILE:
-        required: true
-      DOCKER_PROJECT_NAME:
-        required: true
-      ENV_FILE_PATH:
-        required: true
       SPRING_DATASOURCE_USERNAME:
         required: true
       SPRING_DATASOURCE_PASSWORD:
@@ -34,10 +22,6 @@ on:
       SPRING_DATASOURCE_URL:
         required: true
       SPRING_DATASOURCE_SCHEMA:
-        required: true
-      APP_ID:
-        required: true
-      APP_PRIVATE_KEY:
         required: true
 
   workflow_dispatch:
@@ -60,7 +44,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
   group: cd-${{ inputs.environment }}
@@ -82,12 +65,4 @@ jobs:
       environment: ${{ inputs.environment }}
       java-version: ${{ inputs.java-version }}
       skip-seeds: ${{ inputs.skip-seeds }}
-    secrets: inherit
-
-  deploy:
-    needs: [release, migrate-db]
-    uses: ./.github/workflows/deploy.yml
-    with:
-      environment: ${{ inputs.environment }}
-      image-tag: ${{ needs.release.outputs.image-tag }}
     secrets: inherit
