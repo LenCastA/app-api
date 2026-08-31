@@ -25,10 +25,6 @@ on:
         required: true
       SPRING_DATASOURCE_SCHEMA:
         required: true
-      APP_ID:
-        required: true
-      APP_PRIVATE_KEY:
-        required: true
 
   workflow_dispatch:
     inputs:
