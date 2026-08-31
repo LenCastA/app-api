@@ -23,6 +23,7 @@ class HourlyLoadPublishedDateTest {
                 "Carga Horaria 2026-1 Oficial" to "12/3/2026",
                 "Carga Horaria 2026-2 Oficial" to "24/8/2026",
                 "Carga Horaria 2026-2 Oficial V2" to "27/8/2026",
+                "Carga Horaria 2026-2 Oficial V3" to "28/8/2026",
                 "Carga Horaria 2026-2 Preliminar V2" to "23/8/2026",
             )
 
@@ -48,5 +49,14 @@ class HourlyLoadPublishedDateTest {
                 .atStartOfDay(ZoneId.of("America/Lima"))
                 .toInstant()
         assertEquals(expectedOfficialV2Instant, officialV2Instant, "Instant mismatch for Carga Horaria 2026-2 Oficial V2")
+
+        val officialV3Instant =
+            resolveHourlyLoadPublishedAt("Carga Horaria 2026-2 Oficial V3", fileLastModified = Instant.EPOCH)
+        val expectedOfficialV3Instant =
+            LocalDate
+                .of(2026, 8, 28)
+                .atStartOfDay(ZoneId.of("America/Lima"))
+                .toInstant()
+        assertEquals(expectedOfficialV3Instant, officialV3Instant, "Instant mismatch for Carga Horaria 2026-2 Oficial V3")
     }
 }
